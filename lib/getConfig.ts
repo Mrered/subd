@@ -19,9 +19,9 @@ const getPrivateConfig = async () => {
 }
 
 const getGeneralConfig = async () => {
-  const configUrl = process.env.PUBLIC_CONFIG
+  const configUrl = process.env.GENERAL_CONFIG
   if (!configUrl) {
-    throw new Error('PUBLIC_CONFIG environment variable is not set')
+    throw new Error('GENERAL_CONFIG environment variable is not set')
   }
 
   try {
@@ -29,8 +29,8 @@ const getGeneralConfig = async () => {
     const configContent = await response.text()
     return yaml.load(configContent) as Record<string, any>
   } catch (error) {
-    console.error('Error fetching public config:', error)
-    throw new Error('Failed to fetch public config')
+    console.error('Error fetching general config:', error)
+    throw new Error('Failed to fetch general config')
   }
 }
 

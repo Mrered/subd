@@ -17,6 +17,7 @@ interface ProxyGroup {
 interface FullConfig {
   proxies: any[]
   'proxy-groups': ProxyGroup[]
+  rules?: string[]
 }
 
 export const config = {
@@ -73,7 +74,7 @@ app.get('/:uuid', authenticate, async (c) => {
   }
 
   // Insert proxies
-  fullConfig.proxies = proxies
+  fullConfig.proxies = { ...fullConfig.proxies, ...proxies }
 
   // Remove nodes not in proxies from proxy-groups
   const proxyNames = proxies.map(proxy => proxy.name)
@@ -84,6 +85,17 @@ app.get('/:uuid', authenticate, async (c) => {
       })
     }
   })
+
+  // Remove empty proxy-groups
+  fullConfig['proxy-groups'] = fullConfig['proxy-groups'].filter((group: ProxyGroup) => group.proxies.length > 0)
+
+  // Filter out rules not containing the remaining proxy-group names
+  if (fullConfig.rules) {
+    const proxyGroupNames = fullConfig['proxy-groups'].map(group => group.name)
+    fullConfig.rules = fullConfig.rules.filter(rule => {
+      return !rule.includes('RULE-SET') || proxyGroupNames.some(name => rule.includes(name))
+    })
+  }
 
   // Set headers and return YAML configuration
   c.res.headers.set('Subscription-Userinfo', `upload=${headers.upload};download=${headers.download};total=${headers.total};expire=${headers.expire}`)

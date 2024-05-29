@@ -3,9 +3,10 @@
 import { Hono } from 'hono'
 import { handle } from 'hono/vercel'
 import { sql } from '@vercel/postgres'
-import { authenticate } from '../../lib/auth'  // 引入用户认证中间件
-import yaml2sub from '../../lib/yaml2sub'  // 引入业务逻辑模块
+import { authenticate } from '../../lib/auth'
+import yaml2sub from '../../lib/yaml2sub'
 import { getPrivateConfig, getGeneralConfig } from '../../lib/getConfig'
+import { cleanConfig } from '../../lib/cleanConfig'
 import yaml from 'js-yaml'
 
 interface ProxyGroup {
@@ -81,26 +82,8 @@ app.get('/:uuid', authenticate, async (c) => {
   // Insert proxies correctly
   fullConfig.proxies = [...fullConfig.proxies, ...proxies]
 
-  // Remove nodes not in proxies from proxy-groups
-  const proxyNames = proxies.map(proxy => proxy.name)
-  fullConfig['proxy-groups'].forEach((group: ProxyGroup) => {
-    if (group.proxies) {
-      group.proxies = group.proxies.filter((proxy: string) => {
-        return proxyNames.includes(proxy) || !/^[A-Z]{2}\d{2}$/.test(proxy)
-      })
-    }
-  })
-
-  // Remove empty proxy-groups
-  fullConfig['proxy-groups'] = fullConfig['proxy-groups'].filter((group: ProxyGroup) => group.proxies.length > 0)
-
-  // Filter out rules not containing the remaining proxy-group names
-  if (fullConfig.rules) {
-    const proxyGroupNames = fullConfig['proxy-groups'].map(group => group.name)
-    fullConfig.rules = fullConfig.rules.filter(rule => {
-      return !rule.includes('RULE-SET') || proxyGroupNames.some(name => rule.includes(name))
-    })
-  }
+  // Clean the configuration
+  fullConfig = cleanConfig(fullConfig)
 
   // Set headers, including Content-Disposition for file download
   c.res.headers.set('Subscription-Userinfo', `upload=${headers.upload};download=${headers.download};total=${headers.total};expire=${headers.expire}`)

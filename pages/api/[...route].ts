@@ -97,9 +97,10 @@ app.get('/:uuid', authenticate, async (c) => {
     })
   }
 
-  // Set headers and return YAML configuration
+  // Set headers, including Content-Disposition for file download
   c.res.headers.set('Subscription-Userinfo', `upload=${headers.upload};download=${headers.download};total=${headers.total};expire=${headers.expire}`)
   c.res.headers.set('Content-Type', 'text/plain')
+  c.res.headers.set('Content-Disposition', 'attachment; filename="config.yaml"')
   const yamlString: string = yaml.dump(fullConfig)
   return c.text(yamlString)
 })

@@ -73,8 +73,13 @@ app.get('/:uuid', authenticate, async (c) => {
     fullConfig = await getGeneralConfig() as FullConfig
   }
 
-  // Insert proxies
-  fullConfig.proxies = { ...fullConfig.proxies, ...proxies }
+  // Ensure fullConfig.proxies is an array
+  if (!Array.isArray(fullConfig.proxies)) {
+    fullConfig.proxies = []
+  }
+
+  // Insert proxies correctly
+  fullConfig.proxies = [...fullConfig.proxies, ...proxies]
 
   // Remove nodes not in proxies from proxy-groups
   const proxyNames = proxies.map(proxy => proxy.name)
@@ -100,7 +105,7 @@ app.get('/:uuid', authenticate, async (c) => {
   // Set headers, including Content-Disposition for file download
   c.res.headers.set('Subscription-Userinfo', `upload=${headers.upload};download=${headers.download};total=${headers.total};expire=${headers.expire}`)
   c.res.headers.set('Content-Type', 'text/plain')
-  c.res.headers.set('Content-Disposition', 'attachment; filename="config.yaml"')
+  c.res.headers.set('Content-Disposition', 'attachment; filename=config.yaml')
   const yamlString: string = yaml.dump(fullConfig)
   return c.text(yamlString)
 })

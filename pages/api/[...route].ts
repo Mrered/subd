@@ -39,6 +39,7 @@ app.get('/hello', (c) => {
 app.get('/:uuid', authenticate, async (c) => {
   const uuid = c.req.param('uuid')
   const n = c.req.query('n')
+  const clientType = c.req.query('c') as string || ''
 
   // Fetch user data from the database
   const { rows } = await sql`SELECT nodename, url FROM nodes WHERE uuid = ${uuid}`
@@ -63,7 +64,16 @@ app.get('/:uuid', authenticate, async (c) => {
   }
 
   // Process nodes and headers
-  const { proxies, headers } = await yaml2sub(userData)
+  const { proxies, headers, rawProxies } = await yaml2sub(userData, clientType)
+
+  if (clientType === 'v' && rawProxies) {
+    // If clientType is 'v', return raw proxy lines as plain text
+    const rawConfig = rawProxies.join('\n')
+    c.res.headers.set('Subscription-Userinfo', `upload=${headers.upload};download=${headers.download};total=${headers.total};expire=${headers.expire}`)
+    c.res.headers.set('Content-Type', 'text/plain')
+    c.res.headers.set('Content-Disposition', 'attachment; filename=config.txt')
+    return c.text(rawConfig)
+  }
 
   // Select configuration template
   let fullConfig: FullConfig

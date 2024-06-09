@@ -34,10 +34,12 @@ interface Headers {
 interface Result {
   proxies: ProxyConfig[]
   headers: Headers
+  rawProxies?: string[]
 }
 
-const yaml2sub = async (userData: UserData): Promise<Result> => {
+const yaml2sub = async (userData: UserData, clientType: string): Promise<Result> => {
   const proxies: ProxyConfig[] = []
+  const rawProxies: string[] = []
   let uploadSum = 0
   let downloadSum = 0
   let totalSum = 0
@@ -75,6 +77,16 @@ const yaml2sub = async (userData: UserData): Promise<Result> => {
           }
         })
       }
+
+      // Handle raw proxy line replacement if clientType is 'v'
+      if (clientType === 'v') {
+        const lines = content.split('\n')
+        const vlessLine = lines.find(line => line.startsWith('vless://'))
+        if (vlessLine) {
+          const updatedLine = vlessLine.replace(/#.*$/, `#${nodename}`)
+          rawProxies.push(updatedLine)
+        }
+      }
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.log(`Failed to fetch data for ${nodename}: ${error.message}`)
@@ -91,7 +103,7 @@ const yaml2sub = async (userData: UserData): Promise<Result> => {
     expire: expireMin === Infinity ? null : expireMin
   }
 
-  return { proxies, headers }
+  return { proxies, headers, rawProxies }
 }
 
 const vless2proxy = (content: string, nodename: string): ProxyConfig | null => {

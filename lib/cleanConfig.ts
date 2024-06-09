@@ -25,7 +25,9 @@ export const cleanConfig = (fullConfig: FullConfig) => {
     // Remove nodes not in namelist from proxy-groups
     fullConfig['proxy-groups'].forEach((group: ProxyGroup) => {
       if (group.proxies) {
-        group.proxies = group.proxies.filter(proxy => namelist.has(proxy))
+        group.proxies = group.proxies.filter(proxy => {
+          return namelist.has(proxy) || proxy.toLowerCase().includes('direct')
+        })
       }
     })
 

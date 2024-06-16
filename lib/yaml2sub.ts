@@ -37,6 +37,20 @@ interface Result {
   rawProxies?: string[]
 }
 
+const fetchWithTimeout = async (url: string, timeout: number) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+}
+
 const yaml2sub = async (userData: UserData, clientType: string): Promise<Result> => {
   const proxies: ProxyConfig[] = []
   const rawProxies: string[] = []
@@ -45,10 +59,11 @@ const yaml2sub = async (userData: UserData, clientType: string): Promise<Result>
   let totalSum = 0
   let expireMin = Infinity
 
-  for (const [nodename, url] of Object.entries(userData)) {
+  const fetchPromises = Object.entries(userData).map(async ([nodename, url]) => {
     try {
-      const response = await fetch(url)
-      const content = await response.text()
+      const response = await fetchWithTimeout(url, 5000); // Set timeout to 5 seconds
+      const content = await response.text();
+      
       const proxyConfig = vless2proxy(content, nodename)
       if (proxyConfig) {
         proxies.push(proxyConfig)
@@ -94,7 +109,10 @@ const yaml2sub = async (userData: UserData, clientType: string): Promise<Result>
         console.log(`Failed to fetch data for ${nodename}: Unknown error`)
       }
     }
-  }
+  })
+
+  // Wait for all fetch operations to complete
+  await Promise.all(fetchPromises)
 
   const headers: Headers = {
     upload: uploadSum,

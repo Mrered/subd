@@ -61,7 +61,7 @@ const yaml2sub = async (userData: UserData, clientType: string): Promise<Result>
 
   const fetchPromises = Object.entries(userData).map(async ([nodename, url]) => {
     try {
-      const response = await fetchWithTimeout(url, 7500); // Set timeout to 5 seconds
+      const response = await fetchWithTimeout(url, 10000); // Set timeout to 10 seconds
       const content = await response.text();
       
       const proxyConfig = vless2proxy(content, nodename)

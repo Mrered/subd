@@ -37,12 +37,17 @@ app.get('/hello', (c) => {
 
 // New route to handle GET /api/:uuid
 app.get('/:uuid', authenticate, async (c) => {
+  const startTime = Date.now();
   const uuid = c.req.param('uuid')
   const n = c.req.query('n')
   const clientType = c.req.query('c') as string || ''
 
   // Fetch user data from the database
+  console.log(`[${new Date().toISOString()}] Starting database query...`);
+  const dbStartTime = Date.now();
   const { rows } = await sql`SELECT nodename, url FROM nodes WHERE uuid = ${uuid}`
+  console.log(`[${new Date().toISOString()}] Database query completed in ${Date.now() - dbStartTime} ms`);
+
   const allUserData = rows.reduce((acc, row) => {
     acc[row.nodename] = row.url
     return acc
@@ -64,7 +69,10 @@ app.get('/:uuid', authenticate, async (c) => {
   }
 
   // Process nodes and headers
+  console.log(`[${new Date().toISOString()}] Starting yaml2sub processing...`);
+  const yaml2subStartTime = Date.now();
   const { proxies, headers, rawProxies } = await yaml2sub(userData, clientType)
+  console.log(`[${new Date().toISOString()}] yaml2sub processing completed in ${Date.now() - yaml2subStartTime} ms`);
 
   if (clientType === 'v' && rawProxies) {
     // If clientType is 'v', return raw proxy lines as plain text
@@ -72,17 +80,20 @@ app.get('/:uuid', authenticate, async (c) => {
     c.res.headers.set('Subscription-Userinfo', `upload=${headers.upload};download=${headers.download};total=${headers.total};expire=${headers.expire}`)
     c.res.headers.set('Content-Type', 'text/plain')
     c.res.headers.set('Content-Disposition', 'attachment; filename=config.txt')
+    console.log(`[${new Date().toISOString()}] Request completed in ${Date.now() - startTime} ms`);
     return c.text(rawConfig)
   }
 
   // Select configuration template
   let fullConfig: FullConfig
+  const privateConfigStartTime = Date.now();
   const privateUuid = process.env.PRIVATE_UUID
   if (uuid === privateUuid) {
     fullConfig = await getPrivateConfig() as FullConfig
   } else {
     fullConfig = await getGeneralConfig() as FullConfig
   }
+  console.log(`[${new Date().toISOString()}] Configuration fetching completed in ${Date.now() - privateConfigStartTime} ms`);
 
   // Ensure fullConfig.proxies is an array
   if (!Array.isArray(fullConfig.proxies)) {
@@ -93,13 +104,17 @@ app.get('/:uuid', authenticate, async (c) => {
   fullConfig.proxies = [...fullConfig.proxies, ...proxies]
 
   // Clean the configuration
+  console.log(`[${new Date().toISOString()}] Starting cleanConfig processing...`);
+  const cleanConfigStartTime = Date.now();
   fullConfig = cleanConfig(fullConfig)
+  console.log(`[${new Date().toISOString()}] cleanConfig processing completed in ${Date.now() - cleanConfigStartTime} ms`);
 
   // Set headers, including Content-Disposition for file download
   c.res.headers.set('Subscription-Userinfo', `upload=${headers.upload};download=${headers.download};total=${headers.total};expire=${headers.expire}`)
   c.res.headers.set('Content-Type', 'text/plain')
   c.res.headers.set('Content-Disposition', 'attachment; filename=config.yaml')
   const yamlString: string = yaml.dump(fullConfig)
+  console.log(`[${new Date().toISOString()}] Request completed in ${Date.now() - startTime} ms`);
   return c.text(yamlString)
 })
 

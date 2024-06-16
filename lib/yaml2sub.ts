@@ -52,6 +52,7 @@ const fetchWithTimeout = async (url: string, timeout: number) => {
 }
 
 const yaml2sub = async (userData: UserData, clientType: string): Promise<Result> => {
+  const startTime = Date.now();
   const proxies: ProxyConfig[] = []
   const rawProxies: string[] = []
   let uploadSum = 0
@@ -61,8 +62,11 @@ const yaml2sub = async (userData: UserData, clientType: string): Promise<Result>
 
   const fetchPromises = Object.entries(userData).map(async ([nodename, url]) => {
     try {
-      const response = await fetchWithTimeout(url, 10000); // Set timeout to 10 seconds
+      console.log(`[${new Date().toISOString()}] Starting fetch for ${nodename}...`);
+      const fetchStartTime = Date.now();
+      const response = await fetchWithTimeout(url, 3500); // Set timeout to 3.5 seconds
       const content = await response.text();
+      console.log(`[${new Date().toISOString()}] Fetch for ${nodename} completed in ${Date.now() - fetchStartTime} ms`);
       
       const proxyConfig = vless2proxy(content, nodename)
       if (proxyConfig) {
@@ -121,6 +125,7 @@ const yaml2sub = async (userData: UserData, clientType: string): Promise<Result>
     expire: expireMin === Infinity ? null : expireMin
   }
 
+  console.log(`[${new Date().toISOString()}] yaml2sub processing completed in ${Date.now() - startTime} ms`);
   return { proxies, headers, rawProxies }
 }
 

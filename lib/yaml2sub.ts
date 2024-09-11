@@ -64,7 +64,7 @@ const yaml2sub = async (userData: UserData, clientType: string): Promise<Result>
     try {
       console.log(`[${new Date().toISOString()}] Starting fetch for ${nodename}...`);
       const fetchStartTime = Date.now();
-      const response = await fetchWithTimeout(url, 3500); // Set timeout to 3.5 seconds
+      const response = await fetchWithTimeout(url, 8000); // Set timeout to 8 seconds
       const content = await response.text();
       console.log(`[${new Date().toISOString()}] Fetch for ${nodename} completed in ${Date.now() - fetchStartTime} ms`);
       

@@ -32,3 +32,4 @@ lerna-debug.log*
 .DS_Store
 .vercel
 .env.development.local
+.env*.local

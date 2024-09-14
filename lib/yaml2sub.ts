@@ -38,21 +38,21 @@ interface Result {
 }
 
 const fetchWithTimeout = async (url: string, timeout: number) => {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeout)
   
   try {
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(id);
-    return response;
+    const response = await fetch(url, { signal: controller.signal })
+    clearTimeout(id)
+    return response
   } catch (error) {
-    clearTimeout(id);
-    throw error;
+    clearTimeout(id)
+    throw error
   }
 }
 
 const yaml2sub = async (userData: UserData, clientType: string): Promise<Result> => {
-  const startTime = Date.now();
+  const startTime = Date.now()
   const proxies: ProxyConfig[] = []
   const rawProxies: string[] = []
   let uploadSum = 0
@@ -62,12 +62,28 @@ const yaml2sub = async (userData: UserData, clientType: string): Promise<Result>
 
   const fetchPromises = Object.entries(userData).map(async ([nodename, url]) => {
     try {
-      console.log(`[${new Date().toISOString()}] Starting fetch for ${nodename}...`);
-      const fetchStartTime = Date.now();
-      const response = await fetchWithTimeout(url, 8000); // Set timeout to 8 seconds
-      const content = await response.text();
-      console.log(`[${new Date().toISOString()}] Fetch for ${nodename} completed in ${Date.now() - fetchStartTime} ms`);
+      console.log(`[${new Date().toISOString()}] Starting fetch for ${nodename}...`)
+      const fetchStartTime = Date.now()
       
+      let response = await fetchWithTimeout(url, 3500) // Set timeout to 3.5 seconds
+
+      // Check if the status code is greater than or equal to 400
+      if (response.status >= 400) {
+        console.log(`Initial fetch failed for ${nodename} with status ${response.status}. Retrying...`)
+        // Replace 'whlo' with 'hd' in the domain
+        const newUrl = url.replace(/\/\/(.*?)whlo/, '//$1hd')
+        response = await fetchWithTimeout(newUrl, 3500) // Retry with the updated URL
+  
+        // If the retry also fails, log the failure and exit
+        if (response.status >= 400) {
+          console.log(`Retry fetch failed for ${nodename} with status ${response.status}. Skipping...`)
+          return // Exit early if retry fails
+        }
+      }
+
+      const content = await response.text()
+      console.log(`[${new Date().toISOString()}] Fetch for ${nodename} completed in ${Date.now() - fetchStartTime} ms`)
+
       const proxyConfig = vless2proxy(content, nodename)
       if (proxyConfig) {
         proxies.push(proxyConfig)
@@ -125,7 +141,7 @@ const yaml2sub = async (userData: UserData, clientType: string): Promise<Result>
     expire: expireMin === Infinity ? null : expireMin
   }
 
-  console.log(`[${new Date().toISOString()}] yaml2sub processing completed in ${Date.now() - startTime} ms`);
+  console.log(`[${new Date().toISOString()}] yaml2sub processing completed in ${Date.now() - startTime} ms`)
   return { proxies, headers, rawProxies }
 }
 
